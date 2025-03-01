@@ -22,10 +22,7 @@ function findChromiumExecutable(): string {
       return path;
     }
   }
-
-  throw new Error(
-    "No valid Chromium executable found. Please set PUPPETEER_EXECUTABLE_PATH or install Chromium."
-  );
+  throw new Error("No valid Chromium executable found. Please set PUPPETEER_EXECUTABLE_PATH or install Chromium.");
 }
 
 export class TwitterCrawler {
@@ -47,6 +44,7 @@ export class TwitterCrawler {
 
   /**
    * Logs into Twitter using the credentials from configuration.
+   * Updated to account for Twitter's new login flow.
    */
   async login() {
     if (!this.browser) {
@@ -58,19 +56,22 @@ export class TwitterCrawler {
 
     logger.info("Navigating to Twitter login page");
     await this.page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
-    await this.page.waitForSelector('input[name="text"]');
-
-    // Enter username
+    
+    // Wait for the username input field
+    await this.page.waitForSelector('input[name="text"]', { visible: true });
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
-    await this.page.click('div[data-testid="LoginForm_Login_Button"],div[role="button"]');
 
-    // Wait briefly before entering the password
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait for and click the "Next" button (Twitter may use this selector for continuing)
+    await this.page.waitForSelector('div[data-testid="ocfEnterTextNextButton"]', { visible: true });
+    await this.page.click('div[data-testid="ocfEnterTextNextButton"]');
 
-    // Wait for the password field and enter password
+    // Wait for the password input field
     await this.page.waitForSelector('input[name="password"]', { visible: true });
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
-    await this.page.click('div[data-testid="LoginForm_Login_Button"],div[role="button"]');
+
+    // Wait for and click the login button
+    await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true });
+    await this.page.click('div[data-testid="LoginForm_Login_Button"]');
 
     // Wait for navigation after login
     await this.page.waitForNavigation({ waitUntil: 'networkidle2' });
