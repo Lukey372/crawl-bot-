@@ -7,10 +7,13 @@ export class TwitterCrawler {
   private page: Page | null = null;
 
   private async init() {
+    // Fallback to a common Chromium executable path if PUPPETEER_EXECUTABLE_PATH isn't set.
+    const executablePath =
+      process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+
     this.browser = await puppeteer.launch({
       headless: true,
-      // Use the executable path from environment if available.
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      executablePath,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
