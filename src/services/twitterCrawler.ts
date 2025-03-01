@@ -9,6 +9,8 @@ export class TwitterCrawler {
   private async init() {
     this.browser = await puppeteer.launch({
       headless: true,
+      // Use the executable path from environment if available.
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
