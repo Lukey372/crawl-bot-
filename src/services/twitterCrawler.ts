@@ -4,8 +4,7 @@ import { logger } from '../utils/logger';
 import fs from 'fs';
 
 /**
- * Locates a valid Chromium/Chrome executable. 
- * Throws an error if none is found.
+ * Checks common paths or an environment variable for a Chromium/Chrome executable.
  */
 function findChromiumExecutable(): string {
   const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
@@ -50,9 +49,9 @@ export class TwitterCrawler {
   /**
    * Logs into Twitter (X) using the credentials from configuration.
    * Flow:
-   * 1. Navigate to twitter.com and click "Sign in".
-   * 2. Enter username, click "Next".
-   * 3. Enter password, click "Log in".
+   *   1. Navigate to twitter.com and click "Sign in".
+   *   2. Enter username, click "Next".
+   *   3. Enter password, click "Log in".
    */
   async login() {
     if (!this.browser) {
@@ -63,28 +62,39 @@ export class TwitterCrawler {
     }
 
     logger.info("Navigating to Twitter home page");
-    // Step 1: Open Twitter and click "Sign in"
     await this.page.goto('https://twitter.com/', { waitUntil: 'networkidle2' });
-    await this.page.waitForSelector('a[href="/login"]', { visible: true });
+
+    // STEP 1: Click "Sign in"
+    logger.info("Clicking 'Sign in'");
+    await this.page.waitForSelector('a[href="/login"]', { visible: true, timeout: 15000 });
     await this.page.click('a[href="/login"]');
 
-    // Step 2: Enter username and click "Next"
-    await this.page.waitForSelector('input[name="text"]', { visible: true });
+    // STEP 2: Enter username and click "Next"
+    logger.info("Entering username");
+    await this.page.waitForSelector('input[name="text"]', { visible: true, timeout: 30000 });
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
-    // Twitter currently reuses the same data-testid for the "Next" and "Log in" buttons
-    await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true });
-    await this.page.click('div[data-testid="LoginForm_Login_Button"]');
+    logger.info("Clicking 'Next'");
+    const [nextBtn] = await this.page.$x("//span[contains(text(),'Next')]/ancestor::div[@role='button']");
+    if (!nextBtn) {
+      throw new Error("Next button not found via XPath. UI may have changed.");
+    }
+    await nextBtn.click();
 
-    // Step 3: Enter password and click "Log in"
-    await this.page.waitForSelector('input[name="password"]', { visible: true });
+    // STEP 3: Enter password and click "Log in"
+    logger.info("Entering password");
+    await this.page.waitForSelector('input[name="password"]', { visible: true, timeout: 30000 });
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
-    await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true });
-    await this.page.click('div[data-testid="LoginForm_Login_Button"]');
+    logger.info("Clicking 'Log in'");
+    const [loginBtn] = await this.page.$x("//span[contains(text(),'Log in')]/ancestor::div[@role='button']");
+    if (!loginBtn) {
+      throw new Error("Log in button not found via XPath. UI may have changed.");
+    }
+    await loginBtn.click();
 
     // Wait for navigation after login
-    await this.page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
     logger.info("Logged into Twitter successfully");
   }
 
