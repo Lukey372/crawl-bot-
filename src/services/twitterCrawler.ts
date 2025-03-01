@@ -71,7 +71,10 @@ export class TwitterCrawler {
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
     logger.info("Clicking 'Next'");
-    const nextBtn: ElementHandle | null = await this.page.waitForXPath("//span[contains(text(),'Next')]/ancestor::div[@role='button']", { visible: true, timeout: 5000 });
+    const nextBtn: ElementHandle | null = await (this.page as any).waitForXPath(
+      "//span[contains(text(),'Next')]/ancestor::div[@role='button']",
+      { visible: true, timeout: 5000 }
+    );
     if (!nextBtn) {
       throw new Error("Next button not found via XPath. UI may have changed.");
     }
@@ -83,7 +86,10 @@ export class TwitterCrawler {
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
     logger.info("Clicking 'Log in'");
-    const loginBtn: ElementHandle | null = await this.page.waitForXPath("//span[contains(text(),'Log in')]/ancestor::div[@role='button']", { visible: true, timeout: 5000 });
+    const loginBtn: ElementHandle | null = await (this.page as any).waitForXPath(
+      "//span[contains(text(),'Log in')]/ancestor::div[@role='button']",
+      { visible: true, timeout: 5000 }
+    );
     if (!loginBtn) {
       throw new Error("Log in button not found via XPath. UI may have changed.");
     }
