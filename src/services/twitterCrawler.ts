@@ -34,8 +34,10 @@ export class TwitterCrawler {
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
     await this.page.click('div[data-testid="LoginForm_Login_Button"],div[role="button"]');
 
+    // Wait briefly before entering the password
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Wait for the password field and enter password
-    await this.page.waitForTimeout(1000);
     await this.page.waitForSelector('input[name="password"]', { visible: true });
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
     await this.page.click('div[data-testid="LoginForm_Login_Button"],div[role="button"]');
