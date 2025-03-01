@@ -57,23 +57,28 @@ export class TwitterCrawler {
     logger.info("Navigating to Twitter login page");
     await this.page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
     
-    // Wait for the username input field
+    // Wait for the username input field and type username.
     await this.page.waitForSelector('input[name="text"]', { visible: true });
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
-    // Wait for and click the "Next" button (Twitter may use this selector for continuing)
-    await this.page.waitForSelector('div[data-testid="ocfEnterTextNextButton"]', { visible: true });
-    await this.page.click('div[data-testid="ocfEnterTextNextButton"]');
+    // Attempt to click the "Next" button if it exists.
+    try {
+      await this.page.waitForSelector('div[data-testid="ocfEnterTextNextButton"]', { visible: true, timeout: 5000 });
+      await this.page.click('div[data-testid="ocfEnterTextNextButton"]');
+      logger.info("Clicked the Next button.");
+    } catch (error) {
+      logger.warn("Next button not found, proceeding without clicking it.");
+    }
 
-    // Wait for the password input field
+    // Wait for the password input field and type password.
     await this.page.waitForSelector('input[name="password"]', { visible: true });
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
-    // Wait for and click the login button
+    // Wait for and click the login button.
     await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true });
     await this.page.click('div[data-testid="LoginForm_Login_Button"]');
 
-    // Wait for navigation after login
+    // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2' });
     logger.info("Logged into Twitter successfully");
   }
@@ -93,10 +98,10 @@ export class TwitterCrawler {
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
     await this.page.waitForSelector('article');
 
-    // Scroll to load additional tweets
+    // Scroll to load additional tweets.
     await this.autoScroll();
 
-    // Extract tweet texts from the page
+    // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
       const tweetElements = document.querySelectorAll('article div[lang]');
       return Array.from(tweetElements).map(el => el.textContent || '');
