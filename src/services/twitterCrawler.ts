@@ -9,18 +9,23 @@ function findChromiumExecutable(): string {
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
+
   // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
     '/usr/bin/google-chrome-stable'
   ];
+
   for (const path of fallbackPaths) {
     if (fs.existsSync(path)) {
       return path;
     }
   }
-  throw new Error("No valid Chromium executable found. Please set PUPPETEER_EXECUTABLE_PATH or install Chromium.");
+
+  throw new Error(
+    "No valid Chromium executable found. Please set PUPPETEER_EXECUTABLE_PATH or install Chromium."
+  );
 }
 
 export class TwitterCrawler {
