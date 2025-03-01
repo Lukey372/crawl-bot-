@@ -16,8 +16,14 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for Puppeteer
+# Optional: Confirm which binary was installed (debug step)
+RUN which chromium || which chromium-browser
+
+# Prevent Puppeteer from downloading its own Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
+# Point Puppeteer to the system-installed Chromium
+# Adjust to /usr/bin/chromium-browser if that's what you see from the debug step above
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
@@ -30,4 +36,5 @@ RUN npm install
 COPY . .
 RUN npm run build
 
+# Start the app
 CMD ["npm", "start"]
