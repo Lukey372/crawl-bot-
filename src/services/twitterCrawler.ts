@@ -3,15 +3,14 @@ import { config } from '../config';
 import { logger } from '../utils/logger';
 import fs from 'fs';
 
-/**
- * Checks common paths or an environment variable for a Chromium/Chrome executable.
- */
 function findChromiumExecutable(): string {
+  // Check if an executable path was provided via environment variable.
   const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
 
+  // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
@@ -30,9 +29,6 @@ export class TwitterCrawler {
   private browser: Browser | null = null;
   private page: Page | null = null;
 
-  /**
-   * Initializes Puppeteer with the located Chromium executable.
-   */
   private async init() {
     const executablePath = findChromiumExecutable();
     logger.info(`Using Chromium executable at: ${executablePath}`);
@@ -75,7 +71,8 @@ export class TwitterCrawler {
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
     logger.info("Clicking 'Next'");
-    const [nextBtn] = await this.page.$x("//span[contains(text(),'Next')]/ancestor::div[@role='button']");
+    // Use type assertion to bypass TypeScript error for $x.
+    const [nextBtn] = await (this.page as any).$x("//span[contains(text(),'Next')]/ancestor::div[@role='button']");
     if (!nextBtn) {
       throw new Error("Next button not found via XPath. UI may have changed.");
     }
@@ -87,13 +84,13 @@ export class TwitterCrawler {
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
     logger.info("Clicking 'Log in'");
-    const [loginBtn] = await this.page.$x("//span[contains(text(),'Log in')]/ancestor::div[@role='button']");
+    const [loginBtn] = await (this.page as any).$x("//span[contains(text(),'Log in')]/ancestor::div[@role='button']");
     if (!loginBtn) {
       throw new Error("Log in button not found via XPath. UI may have changed.");
     }
     await loginBtn.click();
 
-    // Wait for navigation after login
+    // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
     logger.info("Logged into Twitter successfully");
   }
@@ -113,10 +110,10 @@ export class TwitterCrawler {
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
     await this.page.waitForSelector('article');
 
-    // Scroll to load additional tweets
+    // Scroll to load additional tweets.
     await this.autoScroll();
 
-    // Extract tweet texts from the page
+    // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
       const tweetElements = document.querySelectorAll('article div[lang]');
       return Array.from(tweetElements).map(el => el.textContent || '');
