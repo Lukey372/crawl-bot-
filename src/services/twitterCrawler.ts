@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page, ElementHandle } from 'puppeteer';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import fs from 'fs';
@@ -71,8 +71,7 @@ export class TwitterCrawler {
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
     logger.info("Clicking 'Next'");
-    // Use type assertion to bypass TypeScript error for $x.
-    const [nextBtn] = await (this.page as any).$x("//span[contains(text(),'Next')]/ancestor::div[@role='button']");
+    const nextBtn: ElementHandle | null = await this.page.waitForXPath("//span[contains(text(),'Next')]/ancestor::div[@role='button']", { visible: true, timeout: 5000 });
     if (!nextBtn) {
       throw new Error("Next button not found via XPath. UI may have changed.");
     }
@@ -84,7 +83,7 @@ export class TwitterCrawler {
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
     logger.info("Clicking 'Log in'");
-    const [loginBtn] = await (this.page as any).$x("//span[contains(text(),'Log in')]/ancestor::div[@role='button']");
+    const loginBtn: ElementHandle | null = await this.page.waitForXPath("//span[contains(text(),'Log in')]/ancestor::div[@role='button']", { visible: true, timeout: 5000 });
     if (!loginBtn) {
       throw new Error("Log in button not found via XPath. UI may have changed.");
     }
