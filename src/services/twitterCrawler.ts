@@ -1,15 +1,35 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import fs from 'fs';
+
+function findChromiumExecutable(): string {
+  // Check if an executable path was provided via environment variable.
+  const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (envPath && fs.existsSync(envPath)) {
+    return envPath;
+  }
+  // Define a list of common fallback paths.
+  const fallbackPaths = [
+    '/usr/bin/chromium-browser',
+    '/usr/bin/chromium',
+    '/usr/bin/google-chrome-stable'
+  ];
+  for (const path of fallbackPaths) {
+    if (fs.existsSync(path)) {
+      return path;
+    }
+  }
+  throw new Error("No valid Chromium executable found. Please set PUPPETEER_EXECUTABLE_PATH or install Chromium.");
+}
 
 export class TwitterCrawler {
   private browser: Browser | null = null;
   private page: Page | null = null;
 
   private async init() {
-    // Fallback to a common Chromium executable path if PUPPETEER_EXECUTABLE_PATH isn't set.
-    const executablePath =
-      process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+    const executablePath = findChromiumExecutable();
+    logger.info(`Using Chromium executable at: ${executablePath}`);
 
     this.browser = await puppeteer.launch({
       headless: true,
