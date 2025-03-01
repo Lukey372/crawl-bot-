@@ -3,14 +3,16 @@ import { config } from '../config';
 import { logger } from '../utils/logger';
 import fs from 'fs';
 
+/**
+ * Locates a valid Chromium/Chrome executable. 
+ * Throws an error if none is found.
+ */
 function findChromiumExecutable(): string {
-  // Check if an executable path was provided via environment variable.
   const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
 
-  // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
@@ -29,6 +31,9 @@ export class TwitterCrawler {
   private browser: Browser | null = null;
   private page: Page | null = null;
 
+  /**
+   * Initializes Puppeteer with the located Chromium executable.
+   */
   private async init() {
     const executablePath = findChromiumExecutable();
     logger.info(`Using Chromium executable at: ${executablePath}`);
@@ -43,8 +48,11 @@ export class TwitterCrawler {
   }
 
   /**
-   * Logs into Twitter using the credentials from configuration.
-   * Updated to account for Twitter's new login flow.
+   * Logs into Twitter (X) using the credentials from configuration.
+   * Flow:
+   * 1. Navigate to twitter.com and click "Sign in".
+   * 2. Enter username, click "Next".
+   * 3. Enter password, click "Log in".
    */
   async login() {
     if (!this.browser) {
@@ -54,31 +62,28 @@ export class TwitterCrawler {
       throw new Error("Puppeteer page not initialized");
     }
 
-    logger.info("Navigating to Twitter login page");
-    await this.page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
-    
-    // Wait for the username input field and type username.
+    logger.info("Navigating to Twitter home page");
+    // Step 1: Open Twitter and click "Sign in"
+    await this.page.goto('https://twitter.com/', { waitUntil: 'networkidle2' });
+    await this.page.waitForSelector('a[href="/login"]', { visible: true });
+    await this.page.click('a[href="/login"]');
+
+    // Step 2: Enter username and click "Next"
     await this.page.waitForSelector('input[name="text"]', { visible: true });
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
-    // Attempt to click the "Next" button if it exists.
-    try {
-      await this.page.waitForSelector('div[data-testid="ocfEnterTextNextButton"]', { visible: true, timeout: 5000 });
-      await this.page.click('div[data-testid="ocfEnterTextNextButton"]');
-      logger.info("Clicked the Next button.");
-    } catch (error) {
-      logger.warn("Next button not found, proceeding without clicking it.");
-    }
-
-    // Wait for the password input field and type password.
-    await this.page.waitForSelector('input[name="password"]', { visible: true });
-    await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
-
-    // Wait for and click the login button.
+    // Twitter currently reuses the same data-testid for the "Next" and "Log in" buttons
     await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true });
     await this.page.click('div[data-testid="LoginForm_Login_Button"]');
 
-    // Wait for navigation after login.
+    // Step 3: Enter password and click "Log in"
+    await this.page.waitForSelector('input[name="password"]', { visible: true });
+    await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
+
+    await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true });
+    await this.page.click('div[data-testid="LoginForm_Login_Button"]');
+
+    // Wait for navigation after login
     await this.page.waitForNavigation({ waitUntil: 'networkidle2' });
     logger.info("Logged into Twitter successfully");
   }
@@ -98,10 +103,10 @@ export class TwitterCrawler {
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
     await this.page.waitForSelector('article');
 
-    // Scroll to load additional tweets.
+    // Scroll to load additional tweets
     await this.autoScroll();
 
-    // Extract tweet texts from the page.
+    // Extract tweet texts from the page
     const tweets = await this.page.evaluate(() => {
       const tweetElements = document.querySelectorAll('article div[lang]');
       return Array.from(tweetElements).map(el => el.textContent || '');
