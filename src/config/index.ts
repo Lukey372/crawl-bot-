@@ -1,19 +1,26 @@
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
+
+let openaiApiKey = process.env.OPENAI_API_KEY || '';
+
+if (!openaiApiKey) {
+  try {
+    openaiApiKey = fs.readFileSync('/etc/secrets/OPENAI_API_KEY', 'utf8').trim();
+  } catch (error) {
+    console.error('Failed to load OpenAI API key from /etc/secrets/OPENAI_API_KEY', error);
+  }
+}
 
 export const config = {
   twitter: {
     username: process.env.TWITTER_USERNAME || '',
     password: process.env.TWITTER_PASSWORD || '',
     authToken: process.env.TWITTER_AUTH_TOKEN || '',
-    // Added timeout settings (in milliseconds)
-    protocolTimeout: Number(process.env.PROTOCOL_TIMEOUT) || 120000,
-    navigationTimeout: Number(process.env.NAVIGATION_TIMEOUT) || 120000,
-    defaultTimeout: Number(process.env.DEFAULT_TIMEOUT) || 120000,
   },
   openai: {
-    apiKey: process.env.OPENAI_API_KEY || '',
+    apiKey: openaiApiKey,
   },
   server: {
     port: Number(process.env.PORT) || 3000,
