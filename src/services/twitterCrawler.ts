@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page, ElementHandle } from 'puppeteer';
 import { config } from '../config';
 // Use the new TwitterLogger from our twitter folder.
 import { TwitterLogger as logger } from '../twitter/Logger';
@@ -54,9 +54,10 @@ export class TwitterCrawler {
    * Logs into X (formerly Twitter) using the credentials from configuration.
    * Flow:
    *   1. Navigate to https://x.com/login.
-   *   2. Wait for and enter the username.
-   *   3. Wait for and enter the password.
-   *   4. Click the login button.
+   *   2. Wait for and enter the username using input[name="text"].
+   *   3. Click the "Next" button (located via XPath based on the text "Next").
+   *   4. Wait for and enter the password.
+   *   5. Click the login button using its data-testid.
    */
   async login() {
     if (!this.browser) {
@@ -71,9 +72,23 @@ export class TwitterCrawler {
 
     // Wait for and enter the username.
     logger.info("Waiting for username field");
-    await this.page.waitForSelector('input[name="username"]', { visible: true, timeout: 30000 });
+    await this.page.waitForSelector('input[name="text"]', { visible: true, timeout: 30000 });
     logger.info("Entering username");
-    await this.page.type('input[name="username"]', config.twitter.username, { delay: 50 });
+    await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
+
+    // Click the Next button.
+    logger.info("Clicking 'Next' button");
+    const nextBtn: ElementHandle | null = await this.page.waitForSelector(
+      `xpath=//button[.//span[contains(text(),"Next")]]`,
+      { visible: true, timeout: 10000 }
+    );
+    if (nextBtn) {
+      // Use evaluate to simulate a real click.
+      await this.page.evaluate(el => (el as HTMLElement).click(), nextBtn);
+      logger.info("'Next' button clicked");
+    } else {
+      logger.warn("Next button not found, proceeding without clicking it");
+    }
 
     // Wait for and enter the password.
     logger.info("Waiting for password field");
@@ -83,8 +98,8 @@ export class TwitterCrawler {
 
     // Click the login button.
     logger.info("Clicking login button");
-    await this.page.waitForSelector('button[type="submit"]', { visible: true, timeout: 10000 });
-    await this.page.click('button[type="submit"]');
+    await this.page.waitForSelector('[data-testid="LoginForm_Login_Button"]', { visible: true, timeout: 10000 });
+    await this.page.click('[data-testid="LoginForm_Login_Button"]');
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
