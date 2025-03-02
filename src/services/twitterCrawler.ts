@@ -71,8 +71,8 @@ export class TwitterCrawler {
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
     logger.info("Clicking 'Next'");
-    const nextBtn: ElementHandle | null = await (this.page as any).waitForXPath(
-      "//span[contains(text(),'Next')]/ancestor::div[@role='button']",
+    const nextBtn: ElementHandle | null = await this.page.waitForSelector(
+      `xpath//span[contains(text(),'Next')]/ancestor::div[@role='button']`,
       { visible: true, timeout: 5000 }
     );
     if (!nextBtn) {
@@ -86,8 +86,8 @@ export class TwitterCrawler {
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
     logger.info("Clicking 'Log in'");
-    const loginBtn: ElementHandle | null = await (this.page as any).waitForXPath(
-      "//span[contains(text(),'Log in')]/ancestor::div[@role='button']",
+    const loginBtn: ElementHandle | null = await this.page.waitForSelector(
+      `xpath//span[contains(text(),'Log in')]/ancestor::div[@role='button']`,
       { visible: true, timeout: 5000 }
     );
     if (!loginBtn) {
