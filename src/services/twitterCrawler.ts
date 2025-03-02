@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page, ElementHandle } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 import fs from 'fs';
@@ -9,14 +9,12 @@ function findChromiumExecutable(): string {
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
-
   // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
     '/usr/bin/google-chrome-stable'
   ];
-
   for (const path of fallbackPaths) {
     if (fs.existsSync(path)) {
       return path;
@@ -48,10 +46,11 @@ export class TwitterCrawler {
 
   /**
    * Logs into Twitter (X) using the credentials from configuration.
+   * This implementation uses the direct login URL and the legacy session selectors.
    * Flow:
-   *   1. Navigate to twitter.com and click "Sign in".
-   *   2. Enter username, attempt to click "Next" (if available).
-   *   3. Enter password, click "Log in".
+   *   1. Navigate to https://twitter.com/login.
+   *   2. Enter username and password.
+   *   3. Click the "Log in" button.
    */
   async login() {
     if (!this.browser) {
@@ -61,48 +60,25 @@ export class TwitterCrawler {
       throw new Error("Puppeteer page not initialized");
     }
 
-    logger.info("Navigating to Twitter home page");
-    await this.page.goto('https://twitter.com/', { waitUntil: 'networkidle2' });
+    logger.info("Navigating to Twitter login page");
+    await this.page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
 
-    // STEP 1: Click "Sign in"
-    logger.info("Clicking 'Sign in'");
-    await this.page.waitForSelector('a[href="/login"]', { visible: true, timeout: 15000 });
-    await this.page.click('a[href="/login"]');
-
-    // STEP 2: Enter username
+    // Wait for the username field.
+    logger.info("Waiting for username field");
+    await this.page.waitForSelector('input[name="session[username_or_email]"]', { visible: true, timeout: 30000 });
     logger.info("Entering username");
-    await this.page.waitForSelector('input[name="text"]', { visible: true, timeout: 30000 });
-    await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
+    await this.page.type('input[name="session[username_or_email]"]', config.twitter.username, { delay: 50 });
 
-    // Attempt to click the "Next" button (it might not always be present)
-    try {
-      logger.info("Attempting to click 'Next'");
-      const nextBtn: ElementHandle | null = await this.page.waitForSelector(
-        `xpath=//span[contains(text(),'Next')]/ancestor::div[@role='button']`,
-        { visible: true, timeout: 10000 }
-      );
-      if (nextBtn) {
-        await this.page.evaluate(el => (el as HTMLElement).click(), nextBtn);
-        logger.info("'Next' button clicked");
-      }
-    } catch (error) {
-      logger.warn("'Next' button not found within timeout, proceeding without clicking it.");
-    }
-
-    // STEP 3: Enter password and click "Log in"
+    // Wait for the password field.
+    logger.info("Waiting for password field");
+    await this.page.waitForSelector('input[name="session[password]"]', { visible: true, timeout: 30000 });
     logger.info("Entering password");
-    await this.page.waitForSelector('input[name="password"]', { visible: true, timeout: 30000 });
-    await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
+    await this.page.type('input[name="session[password]"]', config.twitter.password, { delay: 50 });
 
+    // Click the login button.
     logger.info("Clicking 'Log in'");
-    const loginBtn: ElementHandle | null = await this.page.waitForSelector(
-      `xpath=//span[contains(text(),'Log in')]/ancestor::div[@role='button']`,
-      { visible: true, timeout: 10000 }
-    );
-    if (!loginBtn) {
-      throw new Error("Log in button not found via XPath. UI may have changed.");
-    }
-    await this.page.evaluate(el => (el as HTMLElement).click(), loginBtn);
+    await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true, timeout: 10000 });
+    await this.page.click('div[data-testid="LoginForm_Login_Button"]');
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
