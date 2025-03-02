@@ -26,6 +26,10 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 # Adjust to /usr/bin/chromium-browser if that's what you see from the debug step above
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+# twitter token
+ENV TWITTER_AUTH_TOKEN=90fb7acc05f5c6cc269856baf376b24ce65e28f9
+
+
 WORKDIR /app
 
 # Copy package files and install dependencies
