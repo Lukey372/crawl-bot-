@@ -9,12 +9,14 @@ function findChromiumExecutable(): string {
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
+
   // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
     '/usr/bin/google-chrome-stable'
   ];
+
   for (const path of fallbackPaths) {
     if (fs.existsSync(path)) {
       return path;
@@ -27,6 +29,9 @@ export class TwitterCrawler {
   private browser: Browser | null = null;
   private page: Page | null = null;
 
+  /**
+   * Initializes Puppeteer using a system-installed Chromium.
+   */
   private async init() {
     const executablePath = findChromiumExecutable();
     logger.info(`Using Chromium executable at: ${executablePath}`);
@@ -45,12 +50,13 @@ export class TwitterCrawler {
   }
 
   /**
-   * Logs into Twitter (X) using the credentials from configuration.
-   * This implementation uses the direct login URL and the legacy session selectors.
+   * Logs into X (formerly Twitter) using the credentials from configuration.
    * Flow:
-   *   1. Navigate to https://twitter.com/login.
-   *   2. Enter username and password.
-   *   3. Click the "Log in" button.
+   *   1. Navigate to https://x.com/login.
+   *   2. Wait for and enter the username.
+   *   3. Wait for and enter the password.
+   *   4. Click the login button.
+   *   5. If a 2FA code is provided, wait for and enter the 2FA code and submit.
    */
   async login() {
     if (!this.browser) {
@@ -60,29 +66,40 @@ export class TwitterCrawler {
       throw new Error("Puppeteer page not initialized");
     }
 
-    logger.info("Navigating to Twitter login page");
-    await this.page.goto('https://twitter.com/login', { waitUntil: 'networkidle2' });
+    logger.info("Navigating to X login page");
+    await this.page.goto('https://x.com/login', { waitUntil: 'networkidle2' });
 
-    // Wait for the username field.
+    // Enter username.
     logger.info("Waiting for username field");
-    await this.page.waitForSelector('input[name="session[username_or_email]"]', { visible: true, timeout: 30000 });
+    await this.page.waitForSelector('input[name="username"]', { visible: true, timeout: 30000 });
     logger.info("Entering username");
-    await this.page.type('input[name="session[username_or_email]"]', config.twitter.username, { delay: 50 });
+    await this.page.type('input[name="username"]', config.twitter.username, { delay: 50 });
 
-    // Wait for the password field.
+    // Enter password.
     logger.info("Waiting for password field");
-    await this.page.waitForSelector('input[name="session[password]"]', { visible: true, timeout: 30000 });
+    await this.page.waitForSelector('input[name="password"]', { visible: true, timeout: 30000 });
     logger.info("Entering password");
-    await this.page.type('input[name="session[password]"]', config.twitter.password, { delay: 50 });
+    await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
-    // Click the login button.
-    logger.info("Clicking 'Log in'");
-    await this.page.waitForSelector('div[data-testid="LoginForm_Login_Button"]', { visible: true, timeout: 10000 });
-    await this.page.click('div[data-testid="LoginForm_Login_Button"]');
+    // Click login button.
+    logger.info("Clicking login button");
+    await this.page.waitForSelector('button[type="submit"]', { visible: true, timeout: 10000 });
+    await this.page.click('button[type="submit"]');
+
+    // If a two-factor authentication code is provided, handle it.
+    if (config.twitter.twoFactorCode) {
+      logger.info("2FA code provided, waiting for 2FA input field");
+      await this.page.waitForSelector('input[name="challenge_response"]', { visible: true, timeout: 30000 });
+      logger.info("Entering 2FA code");
+      await this.page.type('input[name="challenge_response"]', config.twitter.twoFactorCode, { delay: 50 });
+      logger.info("Clicking 2FA submit button");
+      await this.page.waitForSelector('button[type="submit"]', { visible: true, timeout: 10000 });
+      await this.page.click('button[type="submit"]');
+    }
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
-    logger.info("Logged into Twitter successfully");
+    logger.info("Logged into X successfully");
   }
 
   /**
