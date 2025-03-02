@@ -51,7 +51,7 @@ export class TwitterCrawler {
     logger.info("Setting auth_token cookie");
     await this.page.setCookie({
       name: 'auth_token',
-      value: config.twitter.authToken, // e.g. '90fb7acc05f5c6cc269856baf376b24ce65e28f9'
+      value: config.twitter.authToken,
       domain: '.x.com',
       path: '/',
       httpOnly: false,
@@ -77,8 +77,6 @@ export class TwitterCrawler {
 
     logger.info("Checking login state with auth_token...");
 
-    // Optionally, verify login by checking for an element that only appears when logged in.
-    // For instance, the user menu or tweet button. If not found, your token may be invalid.
     try {
       await this.page.waitForSelector('[data-testid="SideNav_AccountSwitcher_Button"]', {
         timeout: 10000
@@ -103,12 +101,16 @@ export class TwitterCrawler {
     logger.info(`Searching tweets with query: ${query}`);
     const searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&f=live`;
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
-    await this.page.waitForSelector('article');
 
+    // Wait for at least one tweet container to appear
+    await this.page.waitForSelector('article[data-testid="tweet"]', { timeout: 30000 });
+
+    // Scroll to load additional tweets (optional)
     await this.autoScroll();
 
+    // Extract tweet texts from the page
     const tweets = await this.page.evaluate(() => {
-      const tweetElements = document.querySelectorAll('article div[lang]');
+      const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
       return Array.from(tweetElements).map(el => el.textContent || '');
     });
 
@@ -116,6 +118,9 @@ export class TwitterCrawler {
     return tweets;
   }
 
+  /**
+   * Scrolls the page to load more tweets.
+   */
   private async autoScroll() {
     if (!this.page) return;
     await this.page.evaluate(async () => {
@@ -134,6 +139,9 @@ export class TwitterCrawler {
     });
   }
 
+  /**
+   * Closes the Puppeteer browser instance.
+   */
   async close() {
     if (this.browser) {
       await this.browser.close();
