@@ -29,6 +29,9 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 # twitter token
 ENV TWITTER_AUTH_TOKEN=90fb7acc05f5c6cc269856baf376b24ce65e28f9
 
+# OpenAI API Key for sentiment analysis (if using ChatGPT)
+OPENAI_API_KEY=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
+
 EXPOSE 3000
 
 WORKDIR /app
