@@ -30,7 +30,7 @@ export class TwitterCrawler {
   private page: Page | null = null;
 
   /**
-   * Initializes Puppeteer using a system-installed Chromium.
+   * Initializes Puppeteer using the system-installed Chromium.
    */
   private async init() {
     const executablePath = findChromiumExecutable();
@@ -53,10 +53,9 @@ export class TwitterCrawler {
    * Logs into X (formerly Twitter) using the credentials from configuration.
    * Flow:
    *   1. Navigate to https://x.com/login.
-   *   2. Wait for and enter the username.
-   *   3. Wait for and enter the password.
+   *   2. Enter username.
+   *   3. Enter password.
    *   4. Click the login button.
-   *   5. If a 2FA code is provided, wait for and enter the 2FA code and submit.
    */
   async login() {
     if (!this.browser) {
@@ -69,33 +68,22 @@ export class TwitterCrawler {
     logger.info("Navigating to X login page");
     await this.page.goto('https://x.com/login', { waitUntil: 'networkidle2' });
 
-    // Enter username.
+    // Wait for and enter the username.
     logger.info("Waiting for username field");
     await this.page.waitForSelector('input[name="username"]', { visible: true, timeout: 30000 });
     logger.info("Entering username");
     await this.page.type('input[name="username"]', config.twitter.username, { delay: 50 });
 
-    // Enter password.
+    // Wait for and enter the password.
     logger.info("Waiting for password field");
     await this.page.waitForSelector('input[name="password"]', { visible: true, timeout: 30000 });
     logger.info("Entering password");
     await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
 
-    // Click login button.
+    // Click the login button.
     logger.info("Clicking login button");
     await this.page.waitForSelector('button[type="submit"]', { visible: true, timeout: 10000 });
     await this.page.click('button[type="submit"]');
-
-    // If a two-factor authentication code is provided, handle it.
-    if (config.twitter.twoFactorCode) {
-      logger.info("2FA code provided, waiting for 2FA input field");
-      await this.page.waitForSelector('input[name="challenge_response"]', { visible: true, timeout: 30000 });
-      logger.info("Entering 2FA code");
-      await this.page.type('input[name="challenge_response"]', config.twitter.twoFactorCode, { delay: 50 });
-      logger.info("Clicking 2FA submit button");
-      await this.page.waitForSelector('button[type="submit"]', { visible: true, timeout: 10000 });
-      await this.page.click('button[type="submit"]');
-    }
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
