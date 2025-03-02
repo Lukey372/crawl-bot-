@@ -39,8 +39,10 @@ export class TwitterCrawler {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
-    // Set a user agent to mimic a real browser.
-    await this.page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36');
+    // Set a realistic user agent.
+    await this.page.setUserAgent(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36'
+    );
     await this.page.setViewport({ width: 1280, height: 800 });
   }
 
@@ -74,7 +76,7 @@ export class TwitterCrawler {
 
     logger.info("Clicking 'Next'");
     const nextBtn: ElementHandle | null = await this.page.waitForSelector(
-      `xpath//span[contains(text(),'Next')]/ancestor::div[@role='button']`,
+      `xpath=//span[contains(text(),'Next')]/ancestor::div[@role='button']`,
       { visible: true, timeout: 5000 }
     );
     if (!nextBtn) {
@@ -89,7 +91,7 @@ export class TwitterCrawler {
 
     logger.info("Clicking 'Log in'");
     const loginBtn: ElementHandle | null = await this.page.waitForSelector(
-      `xpath//span[contains(text(),'Log in')]/ancestor::div[@role='button']`,
+      `xpath=//span[contains(text(),'Log in')]/ancestor::div[@role='button']`,
       { visible: true, timeout: 5000 }
     );
     if (!loginBtn) {
