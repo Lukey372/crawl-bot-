@@ -105,7 +105,7 @@ export class TwitterCrawler {
     // Optionally, perform a small scroll to trigger dynamic loading.
     await this.page.evaluate(() => window.scrollBy(0, 500));
 
-    // Wait up to 60 seconds for at least one tweet to load.
+    // Increase timeout to 60 seconds.
     try {
       await this.page.waitForSelector('article[data-testid="tweet"]', { timeout: 60000 });
     } catch (error) {
@@ -114,7 +114,7 @@ export class TwitterCrawler {
       throw error;
     }
 
-    // Use the new autoScroll function to load more tweets.
+    // Scroll repeatedly until at least 15 tweets are loaded or max 20 scroll attempts are reached.
     await this.autoScroll(15, 20);
 
     // Extract tweet texts from the page.
@@ -129,8 +129,8 @@ export class TwitterCrawler {
 
   /**
    * Scrolls the page repeatedly until at least minTweets are loaded or maxScrolls is reached.
-   * @param minTweets - Minimum number of tweets to load (default is 15).
-   * @param maxScrolls - Maximum number of scroll attempts (default is 20).
+   * @param minTweets - Minimum number of tweets to load.
+   * @param maxScrolls - Maximum number of scroll attempts.
    */
   private async autoScroll(minTweets: number = 15, maxScrolls: number = 20) {
     if (!this.page) return;
@@ -144,14 +144,14 @@ export class TwitterCrawler {
       if (tweetCount >= minTweets) {
         break;
       }
-      // If no new tweets loaded after a scroll, break early.
+      // Break if no new tweets loaded after a scroll.
       if (tweetCount === previousTweetCount) {
         logger.info("No additional tweets loaded; breaking autoScroll loop");
         break;
       }
       previousTweetCount = tweetCount;
       await this.page.evaluate(() => window.scrollBy(0, 500));
-      await this.page.waitForTimeout(1500);
+      await new Promise(resolve => setTimeout(resolve, 1500));
       scrolls++;
     }
   }
