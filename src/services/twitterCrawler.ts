@@ -4,15 +4,19 @@ import { logger } from '../utils/logger';
 import fs from 'fs';
 
 function findChromiumExecutable(): string {
+  // Check if an executable path was provided via environment variable.
   const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
+
+  // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
     '/usr/bin/google-chrome-stable'
   ];
+
   for (const path of fallbackPaths) {
     if (fs.existsSync(path)) {
       return path;
@@ -35,7 +39,7 @@ export class TwitterCrawler {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
-    // Set a realistic user agent to mimic a real browser.
+    // Set a realistic user agent.
     await this.page.setUserAgent(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36'
     );
@@ -78,8 +82,8 @@ export class TwitterCrawler {
     if (!nextBtn) {
       throw new Error("Next button not found via XPath. UI may have changed.");
     }
-    // Instead of using nextBtn.click(), we simulate a user click via page.evaluate().
-    await this.page.evaluate((el: HTMLElement) => el.click(), nextBtn);
+    // Use evaluate without explicit type annotation.
+    await this.page.evaluate(el => el.click(), nextBtn);
 
     // STEP 3: Enter password and click "Log in"
     logger.info("Entering password");
@@ -94,7 +98,7 @@ export class TwitterCrawler {
     if (!loginBtn) {
       throw new Error("Log in button not found via XPath. UI may have changed.");
     }
-    await this.page.evaluate((el: HTMLElement) => el.click(), loginBtn);
+    await this.page.evaluate(el => el.click(), loginBtn);
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
@@ -110,15 +114,21 @@ export class TwitterCrawler {
     if (!this.page) {
       throw new Error("Puppeteer page not initialized");
     }
+
     logger.info(`Searching tweets with query: ${query}`);
     const searchUrl = `https://twitter.com/search?q=${encodeURIComponent(query)}&f=live`;
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
     await this.page.waitForSelector('article');
+
+    // Scroll to load additional tweets.
     await this.autoScroll();
+
+    // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
       const tweetElements = document.querySelectorAll('article div[lang]');
       return Array.from(tweetElements).map(el => el.textContent || '');
     });
+
     logger.info(`Found ${tweets.length} tweets`);
     return tweets;
   }
