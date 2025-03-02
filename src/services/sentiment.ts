@@ -2,20 +2,35 @@ import { config } from '../config';
 import { logger } from '../utils/logger';
 
 interface SentimentResult {
-  sentiment: string;
-  summary: string;
+  totalTweetsAnalyzed: number;
+  overallSentiment: 'Bullish' | 'Bearish' | 'Neutral';
+  promotionalCalls: number;
+  verifiedProfiles: number;
+  keyTakeaways: string[];
 }
 
 /**
  * Analyzes the sentiment of provided tweets using the ChatGPT API.
  * @param tweets - Array of tweet texts.
- * @returns An object containing overall sentiment and a summary.
+ * @returns An object containing a structured sentiment analysis.
  */
 export async function analyzeSentiment(tweets: string[]): Promise<SentimentResult> {
-  const prompt = `Analyze the sentiment of the following tweets and provide a summary.
+  const prompt = `Analyze the sentiment of the following tweets about a crypto token and provide a detailed summary.
 Tweets:
 ${tweets.join('\n')}
-Respond with a JSON object containing "sentiment" (bullish, bearish, or neutral) and "summary".`;
+
+Please respond with a JSON object in the following format:
+{
+  "totalTweetsAnalyzed": number,
+  "overallSentiment": "Bullish" | "Bearish" | "Neutral",
+  "promotionalCalls": number,
+  "verifiedProfiles": number,
+  "keyTakeaways": [
+    "Key takeaway 1",
+    "Key takeaway 2",
+    "...etc."
+  ]
+}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -38,7 +53,7 @@ Respond with a JSON object containing "sentiment" (bullish, bearish, or neutral)
     }
     const data = await response.json();
     const content = data.choices[0].message.content;
-    // Expecting the content to be a valid JSON string
+    // Parse the JSON response.
     const result: SentimentResult = JSON.parse(content);
     return result;
   } catch (error) {
