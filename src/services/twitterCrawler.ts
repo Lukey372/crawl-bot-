@@ -88,8 +88,7 @@ export class TwitterCrawler {
   }
 
   /**
-   * Searches for tweets based on the given query (typically a contract address).
-   * Uses the full URL with recent search parameters.
+   * Searches for tweets based on the given query.
    * @param query - The search query string.
    * @returns An array of tweet text strings.
    */
@@ -99,12 +98,21 @@ export class TwitterCrawler {
     }
 
     logger.info(`Searching tweets with query: ${query}`);
-    // Use the complete URL with src=recent_search_click to trigger the recent search view.
+    // Use the full search URL with additional parameters.
     const searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&src=recent_search_click&f=live`;
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
 
-    // Wait for at least one tweet container to appear.
-    await this.page.waitForSelector('article[data-testid="tweet"]', { timeout: 30000 });
+    // Optionally, perform a small scroll to trigger dynamic loading.
+    await this.page.evaluate(() => window.scrollBy(0, 500));
+
+    // Increase timeout to 60 seconds.
+    try {
+      await this.page.waitForSelector('article[data-testid="tweet"]', { timeout: 60000 });
+    } catch (error) {
+      const html = await this.page.content();
+      logger.error("Failed to find tweet elements. Page HTML (first 500 chars):", html.substring(0, 500));
+      throw error;
+    }
 
     // Scroll to load additional tweets (optional)
     await this.autoScroll();
