@@ -10,6 +10,15 @@ interface SentimentResult {
 }
 
 /**
+ * Removes markdown code block formatting from a string.
+ * For example, it strips leading "```json" and trailing "```".
+ */
+function stripMarkdownCodeBlock(text: string): string {
+  // Remove starting and ending code block markers if present.
+  return text.replace(/^```(json)?\s*/i, '').replace(/```$/i, '').trim();
+}
+
+/**
  * Analyzes the sentiment of provided tweets using the DeepSeek API (DeepSeek-V3 model).
  * @param tweets - Array of tweet texts.
  * @returns An object containing a structured sentiment analysis.
@@ -37,7 +46,7 @@ ${tweets.join('\n')}
         "Authorization": `Bearer ${config.openai.apiKey}`
       },
       body: JSON.stringify({
-        model: "deepseek-chat", // Using the DeepSeek-V3 model.
+        model: "deepseek-chat",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
         max_tokens: 1000
@@ -51,12 +60,15 @@ ${tweets.join('\n')}
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    let content = data.choices[0].message.content;
     logger.info("Raw sentiment response:", content);
 
     if (!content || content.trim() === "") {
       throw new Error("Empty response from DeepSeek API");
     }
+
+    // Strip markdown formatting if present.
+    content = stripMarkdownCodeBlock(content);
 
     let result: SentimentResult;
     try {
