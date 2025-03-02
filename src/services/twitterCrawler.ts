@@ -1,23 +1,18 @@
-import puppeteer, { Browser, Page, ElementHandle } from 'puppeteer';
+import puppeteer, { Browser, Page } from 'puppeteer';
 import { config } from '../config';
-// Use the new TwitterLogger from our twitter folder.
 import { TwitterLogger as logger } from '../twitter/Logger';
 import fs from 'fs';
 
 function findChromiumExecutable(): string {
-  // Check if an executable path was provided via environment variable.
   const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
   if (envPath && fs.existsSync(envPath)) {
     return envPath;
   }
-
-  // Define a list of common fallback paths.
   const fallbackPaths = [
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
     '/usr/bin/google-chrome-stable'
   ];
-
   for (const path of fallbackPaths) {
     if (fs.existsSync(path)) {
       return path;
@@ -32,6 +27,7 @@ export class TwitterCrawler {
 
   /**
    * Initializes Puppeteer using the system-installed Chromium.
+   * Then sets the auth_token cookie to bypass the login flow.
    */
   private async init() {
     const executablePath = findChromiumExecutable();
@@ -43,21 +39,33 @@ export class TwitterCrawler {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
-    // Set a realistic user agent.
     await this.page.setUserAgent(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36'
     );
     await this.page.setViewport({ width: 1280, height: 800 });
+
+    // 1. Navigate to x.com so the cookie domain is recognized
+    await this.page.goto('https://x.com', { waitUntil: 'networkidle2' });
+
+    // 2. Set your auth_token cookie (domain must match x.com)
+    logger.info("Setting auth_token cookie");
+    await this.page.setCookie({
+      name: 'auth_token',
+      value: config.twitter.authToken, // e.g. '90fb7acc05f5c6cc269856baf376b24ce65e28f9'
+      domain: '.x.com',
+      path: '/',
+      httpOnly: false,
+      secure: true
+    });
+
+    // 3. Reload the page to apply the cookie
+    await this.page.reload({ waitUntil: 'networkidle2' });
+    logger.info("Cookie set, page reloaded");
   }
 
   /**
-   * Logs into X (formerly Twitter) using the credentials from configuration.
-   * Flow:
-   *   1. Navigate to https://x.com/login.
-   *   2. Wait for and enter the username using input[name="text"].
-   *   3. Click the "Next" button (located via XPath based on the text "Next").
-   *   4. Wait for and enter the password.
-   *   5. Click the login button using its data-testid.
+   * If the auth_token is valid, you're already logged in.
+   * If it's invalid or expired, you may get a login prompt.
    */
   async login() {
     if (!this.browser) {
@@ -67,43 +75,19 @@ export class TwitterCrawler {
       throw new Error("Puppeteer page not initialized");
     }
 
-    logger.info("Navigating to X login page");
-    await this.page.goto('https://x.com/login', { waitUntil: 'networkidle2' });
+    logger.info("Checking login state with auth_token...");
 
-    // Wait for and enter the username.
-    logger.info("Waiting for username field");
-    await this.page.waitForSelector('input[name="text"]', { visible: true, timeout: 30000 });
-    logger.info("Entering username");
-    await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
-
-    // Click the Next button.
-    logger.info("Clicking 'Next' button");
-    const nextBtn: ElementHandle | null = await this.page.waitForSelector(
-      `xpath=//button[.//span[contains(text(),"Next")]]`,
-      { visible: true, timeout: 10000 }
-    );
-    if (nextBtn) {
-      // Use evaluate to simulate a real click.
-      await this.page.evaluate(el => (el as HTMLElement).click(), nextBtn);
-      logger.info("'Next' button clicked");
-    } else {
-      logger.warn("Next button not found, proceeding without clicking it");
+    // Optionally, verify login by checking for an element that only appears when logged in.
+    // For instance, the user menu or tweet button. If not found, your token may be invalid.
+    try {
+      await this.page.waitForSelector('[data-testid="SideNav_AccountSwitcher_Button"]', {
+        timeout: 10000
+      });
+      logger.info("Confirmed logged in via cookie-based session");
+    } catch (error) {
+      logger.warn("Could not confirm login state. Token may be invalid or expired.");
+      throw new Error("auth_token cookie login failed");
     }
-
-    // Wait for and enter the password.
-    logger.info("Waiting for password field");
-    await this.page.waitForSelector('input[name="password"]', { visible: true, timeout: 30000 });
-    logger.info("Entering password");
-    await this.page.type('input[name="password"]', config.twitter.password, { delay: 50 });
-
-    // Click the login button.
-    logger.info("Clicking login button");
-    await this.page.waitForSelector('[data-testid="LoginForm_Login_Button"]', { visible: true, timeout: 10000 });
-    await this.page.click('[data-testid="LoginForm_Login_Button"]');
-
-    // Wait for navigation after login.
-    await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
-    logger.info("Logged into X successfully");
   }
 
   /**
@@ -117,14 +101,12 @@ export class TwitterCrawler {
     }
 
     logger.info(`Searching tweets with query: ${query}`);
-    const searchUrl = `https://twitter.com/search?q=${encodeURIComponent(query)}&f=live`;
+    const searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&f=live`;
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
     await this.page.waitForSelector('article');
 
-    // Scroll to load additional tweets.
     await this.autoScroll();
 
-    // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
       const tweetElements = document.querySelectorAll('article div[lang]');
       return Array.from(tweetElements).map(el => el.textContent || '');
@@ -134,9 +116,6 @@ export class TwitterCrawler {
     return tweets;
   }
 
-  /**
-   * Automatically scrolls the page to load more tweets.
-   */
   private async autoScroll() {
     if (!this.page) return;
     await this.page.evaluate(async () => {
@@ -155,9 +134,6 @@ export class TwitterCrawler {
     });
   }
 
-  /**
-   * Closes the Puppeteer browser instance.
-   */
   async close() {
     if (this.browser) {
       await this.browser.close();
