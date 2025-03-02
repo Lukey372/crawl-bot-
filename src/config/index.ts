@@ -4,7 +4,6 @@ import fs from 'fs';
 dotenv.config();
 
 let openaiApiKey = process.env.OPENAI_API_KEY || '';
-
 if (!openaiApiKey) {
   try {
     openaiApiKey = fs.readFileSync('/etc/secrets/OPENAI_API_KEY', 'utf8').trim();
