@@ -82,8 +82,7 @@ export class TwitterCrawler {
     if (!nextBtn) {
       throw new Error("Next button not found via XPath. UI may have changed.");
     }
-    // Use evaluate without explicit type annotation.
-    await this.page.evaluate(el => el.click(), nextBtn);
+    await this.page.evaluate((el: any) => el.click(), nextBtn);
 
     // STEP 3: Enter password and click "Log in"
     logger.info("Entering password");
@@ -98,7 +97,7 @@ export class TwitterCrawler {
     if (!loginBtn) {
       throw new Error("Log in button not found via XPath. UI may have changed.");
     }
-    await this.page.evaluate(el => el.click(), loginBtn);
+    await this.page.evaluate((el: any) => el.click(), loginBtn);
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
