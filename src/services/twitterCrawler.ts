@@ -44,10 +44,10 @@ export class TwitterCrawler {
     );
     await this.page.setViewport({ width: 1280, height: 800 });
 
-    // 1. Navigate to x.com so the cookie domain is recognized
+    // Navigate to x.com so the cookie domain is recognized
     await this.page.goto('https://x.com', { waitUntil: 'networkidle2' });
 
-    // 2. Set your auth_token cookie (domain must match x.com)
+    // Set your auth_token cookie (domain must match x.com)
     logger.info("Setting auth_token cookie");
     await this.page.setCookie({
       name: 'auth_token',
@@ -58,7 +58,7 @@ export class TwitterCrawler {
       secure: true
     });
 
-    // 3. Reload the page to apply the cookie
+    // Reload the page to apply the cookie
     await this.page.reload({ waitUntil: 'networkidle2' });
     logger.info("Cookie set, page reloaded");
   }
@@ -76,7 +76,6 @@ export class TwitterCrawler {
     }
 
     logger.info("Checking login state with auth_token...");
-
     try {
       await this.page.waitForSelector('[data-testid="SideNav_AccountSwitcher_Button"]', {
         timeout: 10000
@@ -89,7 +88,8 @@ export class TwitterCrawler {
   }
 
   /**
-   * Searches for tweets based on the given query.
+   * Searches for tweets based on the given query (typically a contract address).
+   * Uses the full URL with recent search parameters.
    * @param query - The search query string.
    * @returns An array of tweet text strings.
    */
@@ -99,16 +99,17 @@ export class TwitterCrawler {
     }
 
     logger.info(`Searching tweets with query: ${query}`);
-    const searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&f=live`;
+    // Use the complete URL with src=recent_search_click to trigger the recent search view.
+    const searchUrl = `https://x.com/search?q=${encodeURIComponent(query)}&src=recent_search_click&f=live`;
     await this.page.goto(searchUrl, { waitUntil: 'networkidle2' });
 
-    // Wait for at least one tweet container to appear
+    // Wait for at least one tweet container to appear.
     await this.page.waitForSelector('article[data-testid="tweet"]', { timeout: 30000 });
 
     // Scroll to load additional tweets (optional)
     await this.autoScroll();
 
-    // Extract tweet texts from the page
+    // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
       const tweetElements = document.querySelectorAll('article[data-testid="tweet"]');
       return Array.from(tweetElements).map(el => el.textContent || '');
