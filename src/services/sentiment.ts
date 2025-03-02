@@ -15,22 +15,19 @@ interface SentimentResult {
  * @returns An object containing a structured sentiment analysis.
  */
 export async function analyzeSentiment(tweets: string[]): Promise<SentimentResult> {
-  const prompt = `Analyze the sentiment of the following tweets about a crypto token and provide a detailed summary.
+  const prompt = `You are a seasoned analyst with expertise in social media sentiment for crypto tokens. Below is a list of tweets discussing a crypto token. Please analyze these tweets and provide a detailed sentiment summary. Your response must be formatted as a JSON object with the following fields:
+
+- "totalTweetsAnalyzed": The total number of tweets analyzed.
+- "overallSentiment": The overall sentiment, which should be one of "Bullish", "Bearish", or "Neutral".
+- "promotionalCalls": The number of tweets that appear to be promotional or "shill" tweets.
+- "verifiedProfiles": The number of tweets from verified accounts.
+- "keyTakeaways": An array of key insights or common themes you observed in the tweets.
+
+Respond only with the JSON object in the specified format.
+
 Tweets:
 ${tweets.join('\n')}
-
-Please respond with a JSON object in the following format:
-{
-  "totalTweetsAnalyzed": number,
-  "overallSentiment": "Bullish" | "Bearish" | "Neutral",
-  "promotionalCalls": number,
-  "verifiedProfiles": number,
-  "keyTakeaways": [
-    "Key takeaway 1",
-    "Key takeaway 2",
-    "...etc."
-  ]
-}`;
+`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -43,7 +40,7 @@ Please respond with a JSON object in the following format:
         model: "gpt-4",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 150
+        max_tokens: 1000
       })
     });
 
@@ -57,7 +54,7 @@ Please respond with a JSON object in the following format:
     const content = data.choices[0].message.content;
     logger.info("Raw sentiment response:", content);
 
-    if (!content) {
+    if (!content || content.trim() === "") {
       throw new Error("Empty response from OpenAI API");
     }
 
