@@ -10,7 +10,7 @@ interface SentimentResult {
 }
 
 /**
- * Analyzes the sentiment of provided tweets using the ChatGPT API.
+ * Analyzes the sentiment of provided tweets using the DeepSeek API (DeepSeek-V3 model).
  * @param tweets - Array of tweet texts.
  * @returns An object containing a structured sentiment analysis.
  */
@@ -30,14 +30,14 @@ ${tweets.join('\n')}
 `;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${config.openai.apiKey}`
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: "deepseek-chat", // Using the DeepSeek-V3 model.
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
         max_tokens: 1000
@@ -46,8 +46,8 @@ ${tweets.join('\n')}
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error("Error in OpenAI API response", errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
+      logger.error("Error in DeepSeek API response", errorText);
+      throw new Error(`DeepSeek API error: ${errorText}`);
     }
 
     const data = await response.json();
@@ -55,7 +55,7 @@ ${tweets.join('\n')}
     logger.info("Raw sentiment response:", content);
 
     if (!content || content.trim() === "") {
-      throw new Error("Empty response from OpenAI API");
+      throw new Error("Empty response from DeepSeek API");
     }
 
     let result: SentimentResult;
