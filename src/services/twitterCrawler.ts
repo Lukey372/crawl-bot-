@@ -50,7 +50,7 @@ export class TwitterCrawler {
    * Logs into Twitter (X) using the credentials from configuration.
    * Flow:
    *   1. Navigate to twitter.com and click "Sign in".
-   *   2. Enter username, click "Next".
+   *   2. Enter username, attempt to click "Next" (if available).
    *   3. Enter password, click "Log in".
    */
   async login() {
@@ -69,20 +69,25 @@ export class TwitterCrawler {
     await this.page.waitForSelector('a[href="/login"]', { visible: true, timeout: 15000 });
     await this.page.click('a[href="/login"]');
 
-    // STEP 2: Enter username and click "Next"
+    // STEP 2: Enter username
     logger.info("Entering username");
     await this.page.waitForSelector('input[name="text"]', { visible: true, timeout: 30000 });
     await this.page.type('input[name="text"]', config.twitter.username, { delay: 50 });
 
-    logger.info("Clicking 'Next'");
-    const nextBtn: ElementHandle | null = await this.page.waitForSelector(
-      `xpath=//span[contains(text(),'Next')]/ancestor::div[@role='button']`,
-      { visible: true, timeout: 5000 }
-    );
-    if (!nextBtn) {
-      throw new Error("Next button not found via XPath. UI may have changed.");
+    // Attempt to click the "Next" button (it might not always be present)
+    try {
+      logger.info("Attempting to click 'Next'");
+      const nextBtn: ElementHandle | null = await this.page.waitForSelector(
+        `xpath=//span[contains(text(),'Next')]/ancestor::div[@role='button']`,
+        { visible: true, timeout: 10000 }
+      );
+      if (nextBtn) {
+        await this.page.evaluate(el => (el as HTMLElement).click(), nextBtn);
+        logger.info("'Next' button clicked");
+      }
+    } catch (error) {
+      logger.warn("'Next' button not found within timeout, proceeding without clicking it.");
     }
-    await this.page.evaluate((el: any) => el.click(), nextBtn);
 
     // STEP 3: Enter password and click "Log in"
     logger.info("Entering password");
@@ -92,12 +97,12 @@ export class TwitterCrawler {
     logger.info("Clicking 'Log in'");
     const loginBtn: ElementHandle | null = await this.page.waitForSelector(
       `xpath=//span[contains(text(),'Log in')]/ancestor::div[@role='button']`,
-      { visible: true, timeout: 5000 }
+      { visible: true, timeout: 10000 }
     );
     if (!loginBtn) {
       throw new Error("Log in button not found via XPath. UI may have changed.");
     }
-    await this.page.evaluate((el: any) => el.click(), loginBtn);
+    await this.page.evaluate(el => (el as HTMLElement).click(), loginBtn);
 
     // Wait for navigation after login.
     await this.page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 });
