@@ -43,7 +43,7 @@ app.post('/crawl', async (req: Request, res: Response) => {
  * Starts the API server on the configured port.
  */
 export function startServer() {
-  app.listen(config.server.port, () => {
+  app.listen(config.server.port, '0.0.0.0', () => {
     logger.info(`Server listening on port ${config.server.port}`);
   });
 }
