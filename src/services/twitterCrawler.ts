@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { config } from '../config';
-import { logger } from '../utils/logger';
+// Use the new TwitterLogger from our twitter folder.
+import { TwitterLogger as logger } from '../twitter/Logger';
 import fs from 'fs';
 
 function findChromiumExecutable(): string {
@@ -53,8 +54,8 @@ export class TwitterCrawler {
    * Logs into X (formerly Twitter) using the credentials from configuration.
    * Flow:
    *   1. Navigate to https://x.com/login.
-   *   2. Enter username.
-   *   3. Enter password.
+   *   2. Wait for and enter the username.
+   *   3. Wait for and enter the password.
    *   4. Click the login button.
    */
   async login() {
