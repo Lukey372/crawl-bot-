@@ -1,21 +1,14 @@
-import { config } from './config';
+import { TwitterPipeline } from './twitter/TwitterPipeline';
 import { logger } from './utils/logger';
-import { startServer } from './api/server';
-import { TwitterCrawler } from './services/twitterCrawler';
 
 async function main() {
   try {
-    // Instantiate the Twitter crawler and perform login
-    const twitterCrawler = new TwitterCrawler();
-    await twitterCrawler.login();
-
-    // Start the API server
-    startServer();
-
-    // Optionally, you can schedule or trigger crawler tasks as needed.
+    const pipeline = new TwitterPipeline();
+    // Replace 'your search query' with the actual query you want to run.
+    const result = await pipeline.run('your search query');
+    logger.info('Pipeline result:', result);
   } catch (error) {
-    logger.error("Error during initialization", error);
-    process.exit(1);
+    logger.error('Error in pipeline', error);
   }
 }
 
