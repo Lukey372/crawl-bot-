@@ -39,6 +39,8 @@ export class TwitterCrawler {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
+    // Set a user agent to mimic a real browser.
+    await this.page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36');
     await this.page.setViewport({ width: 1280, height: 800 });
   }
 
