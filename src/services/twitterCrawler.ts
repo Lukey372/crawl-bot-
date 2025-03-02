@@ -105,7 +105,7 @@ export class TwitterCrawler {
     // Optionally, perform a small scroll to trigger dynamic loading.
     await this.page.evaluate(() => window.scrollBy(0, 500));
 
-    // Increase timeout to 60 seconds.
+    // Wait up to 60 seconds for at least one tweet to load.
     try {
       await this.page.waitForSelector('article[data-testid="tweet"]', { timeout: 60000 });
     } catch (error) {
@@ -114,8 +114,8 @@ export class TwitterCrawler {
       throw error;
     }
 
-    // Scroll to load additional tweets (optional)
-    await this.autoScroll();
+    // Use the new autoScroll function to load more tweets.
+    await this.autoScroll(15, 20);
 
     // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
@@ -128,24 +128,32 @@ export class TwitterCrawler {
   }
 
   /**
-   * Scrolls the page to load more tweets.
+   * Scrolls the page repeatedly until at least minTweets are loaded or maxScrolls is reached.
+   * @param minTweets - Minimum number of tweets to load (default is 15).
+   * @param maxScrolls - Maximum number of scroll attempts (default is 20).
    */
-  private async autoScroll() {
+  private async autoScroll(minTweets: number = 15, maxScrolls: number = 20) {
     if (!this.page) return;
-    await this.page.evaluate(async () => {
-      await new Promise<void>((resolve) => {
-        let totalHeight = 0;
-        const distance = 100;
-        const timer = setInterval(() => {
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-          if (totalHeight >= document.body.scrollHeight) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 100);
+    let scrolls = 0;
+    let previousTweetCount = 0;
+    while (scrolls < maxScrolls) {
+      const tweetCount = await this.page.evaluate(() => {
+        return document.querySelectorAll('article[data-testid="tweet"]').length;
       });
-    });
+      logger.info(`AutoScroll attempt ${scrolls + 1}: Found ${tweetCount} tweets`);
+      if (tweetCount >= minTweets) {
+        break;
+      }
+      // If no new tweets loaded after a scroll, break early.
+      if (tweetCount === previousTweetCount) {
+        logger.info("No additional tweets loaded; breaking autoScroll loop");
+        break;
+      }
+      previousTweetCount = tweetCount;
+      await this.page.evaluate(() => window.scrollBy(0, 500));
+      await this.page.waitForTimeout(1500);
+      scrolls++;
+    }
   }
 
   /**
