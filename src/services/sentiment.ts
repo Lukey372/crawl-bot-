@@ -46,15 +46,28 @@ Please respond with a JSON object in the following format:
         max_tokens: 150
       })
     });
+
     if (!response.ok) {
       const errorText = await response.text();
       logger.error("Error in OpenAI API response", errorText);
       throw new Error(`OpenAI API error: ${errorText}`);
     }
+
     const data = await response.json();
     const content = data.choices[0].message.content;
-    // Parse the JSON response.
-    const result: SentimentResult = JSON.parse(content);
+    logger.info("Raw sentiment response:", content);
+
+    if (!content) {
+      throw new Error("Empty response from OpenAI API");
+    }
+
+    let result: SentimentResult;
+    try {
+      result = JSON.parse(content);
+    } catch (jsonError) {
+      logger.error("Failed to parse JSON response", jsonError);
+      throw new Error("Failed to parse JSON response: " + content);
+    }
     return result;
   } catch (error) {
     logger.error("Sentiment analysis failed", error);
