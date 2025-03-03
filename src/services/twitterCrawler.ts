@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page, Request } from 'puppeteer';
+import puppeteer, { Browser, Page, HTTPRequest } from 'puppeteer';
 import { config } from '../config';
 import { TwitterLogger as logger } from '../twitter/Logger';
 import fs from 'fs';
@@ -42,10 +42,10 @@ export class TwitterCrawler {
 
     // Enable request interception to optimize performance by aborting unnecessary requests
     await this.page.setRequestInterception(true);
-    this.page.on('request', (request: Request) => {
+    this.page.on('request', (request: HTTPRequest) => {
       const resourceType = request.resourceType();
       if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-        request.abort().catch((err) => logger.warn(`Failed to abort request: ${err}`));
+        request.abort().catch((err: any) => logger.warn(`Failed to abort request: ${err}`));
       } else {
         request.continue();
       }
