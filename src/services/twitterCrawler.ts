@@ -1,4 +1,4 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Browser, Page, Request } from 'puppeteer';
 import { config } from '../config';
 import { TwitterLogger as logger } from '../twitter/Logger';
 import fs from 'fs';
@@ -39,6 +39,18 @@ export class TwitterCrawler {
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     this.page = await this.browser.newPage();
+
+    // Enable request interception to optimize performance by aborting unnecessary requests
+    await this.page.setRequestInterception(true);
+    this.page.on('request', (request: Request) => {
+      const resourceType = request.resourceType();
+      if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+        request.abort().catch((err) => logger.warn(`Failed to abort request: ${err}`));
+      } else {
+        request.continue();
+      }
+    });
+
     await this.page.setUserAgent(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.88 Safari/537.36'
     );
@@ -89,6 +101,7 @@ export class TwitterCrawler {
 
   /**
    * Searches for tweets based on the given query.
+   * This method returns a Promise that resolves with an array of tweet text strings.
    * @param query - The search query string.
    * @returns An array of tweet text strings.
    */
@@ -151,9 +164,30 @@ export class TwitterCrawler {
       }
       previousTweetCount = tweetCount;
       await this.page.evaluate(() => window.scrollBy(0, 500));
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Slightly reduce delay to improve performance without overloading the page
+      await new Promise(resolve => setTimeout(resolve, 1000));
       scrolls++;
     }
+  }
+
+  /**
+   * Asynchronously processes a tweet search without blocking the main thread.
+   * This method can be used to schedule the tweet search as a background task.
+   * @param query - The search query string.
+   * @returns A Promise that resolves to an array of tweet text strings.
+   */
+  async asyncSearchTweets(query: string): Promise<string[]> {
+    // Offload the searchTweets operation to a separate asynchronous task
+    return new Promise((resolve, reject) => {
+      setImmediate(async () => {
+        try {
+          const results = await this.searchTweets(query);
+          resolve(results);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
   }
 
   /**
