@@ -1,12 +1,22 @@
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
+interface EngagementMetrics {
+  averageLikes: number;
+  averageRetweets: number;
+  averageReplies: number;
+}
+
 interface SentimentResult {
   totalTweetsAnalyzed: number;
   overallSentiment: 'Bullish' | 'Bearish' | 'Neutral';
   promotionalCalls: number;
   verifiedProfiles: number;
   keyTakeaways: string[];
+  engagementMetrics: EngagementMetrics;
+  dominantThemes: string[];
+  confidenceLevel: string;
+  tradeSignal: 'Buy' | 'Sell' | 'Hold';
 }
 
 /**
@@ -24,13 +34,17 @@ function stripMarkdownCodeBlock(text: string): string {
  * @returns An object containing a structured sentiment analysis.
  */
 export async function analyzeSentiment(tweets: string[]): Promise<SentimentResult> {
-  const prompt = `You are a seasoned analyst with expertise in social media sentiment for crypto tokens. Below is a list of tweets discussing a crypto token. Please analyze these tweets and provide a detailed sentiment summary. Your response must be formatted as a JSON object with the following fields:
+  const prompt = `You are a seasoned analyst with expertise in social media sentiment analysis for crypto tokens—especially memecoins, which can be extremely new (e.g., created only an hour ago) and highly volatile. Below is a list of tweets discussing a crypto token. Please analyze these tweets carefully, taking into account the token’s recency, rapid hype cycles, and any potential red flags. Your response must be formatted as a JSON object with the following fields:
 
 - "totalTweetsAnalyzed": The total number of tweets analyzed.
 - "overallSentiment": The overall sentiment, which should be one of "Bullish", "Bearish", or "Neutral".
 - "promotionalCalls": The number of tweets that appear to be promotional or "shill" tweets.
 - "verifiedProfiles": The number of tweets from verified accounts.
 - "keyTakeaways": An array of key insights or common themes you observed in the tweets.
+- "engagementMetrics": An object with the average number of likes, retweets, and replies per tweet. Use the keys "averageLikes", "averageRetweets", and "averageReplies".
+- "dominantThemes": An array of recurring topics or hashtags that are prominent in the tweets.
+- "confidenceLevel": A qualitative descriptor ("High", "Medium", or "Low") reflecting how confident you are in your analysis.
+- "tradeSignal": A buy/sell recommendation, which should be one of "Buy", "Sell", or "Hold".
 
 Respond only with the JSON object in the specified format.
 
