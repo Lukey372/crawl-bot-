@@ -1,17 +1,19 @@
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
+interface EngagementMetrics {
+  averageLikes: number;
+  averageRetweets: number;
+  averageReplies: number;
+}
+
 interface SentimentResult {
   totalTweetsAnalyzed: number;
   overallSentiment: 'Bullish' | 'Bearish' | 'Neutral';
   promotionalCalls: number;
   verifiedProfiles: number;
   keyTakeaways: string[];
-  engagementMetrics: {
-    averageLikes: number;
-    averageRetweets: number;
-    averageReplies: number;
-  };
+  engagementMetrics: EngagementMetrics;
   dominantThemes: string[];
   confidenceLevel: string;
   tradeSignal: 'Buy' | 'Sell' | 'Hold';
@@ -71,22 +73,33 @@ ${tweets.join('\n')}
     }
 
     // Read the entire response as text.
-    let content = await response.text();
-    logger.info("Raw sentiment response:", content);
+    const fullResponseText = await response.text();
+    logger.info("Full raw response:", fullResponseText);
 
-    if (!content || content.trim() === "") {
-      throw new Error("Empty response from DeepSeek API");
+    // Parse the full response JSON.
+    let fullResponse;
+    try {
+      fullResponse = JSON.parse(fullResponseText);
+    } catch (parseError) {
+      logger.error("Failed to parse full API response", parseError, fullResponseText);
+      throw new Error("Failed to parse full API response");
+    }
+
+    // Extract the assistant's message content.
+    const messageContent = fullResponse.choices?.[0]?.message?.content;
+    if (!messageContent || messageContent.trim() === "") {
+      throw new Error("Empty message content from DeepSeek API");
     }
 
     // Strip markdown formatting if present.
-    content = stripMarkdownCodeBlock(content);
+    const content = stripMarkdownCodeBlock(messageContent);
 
     let result: SentimentResult;
     try {
       result = JSON.parse(content);
     } catch (jsonError) {
-      logger.error("Failed to parse JSON response", jsonError, content);
-      throw new Error("Failed to parse JSON response: " + content);
+      logger.error("Failed to parse JSON from message content", jsonError, content);
+      throw new Error("Failed to parse JSON from message content: " + content);
     }
     return result;
   } catch (error) {
