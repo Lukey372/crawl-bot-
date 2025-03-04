@@ -43,7 +43,7 @@ export async function analyzeSentiment(tweets: string[]): Promise<SentimentResul
 - "confidenceLevel": A qualitative descriptor ("High", "Medium", or "Low") reflecting how confident you are in your analysis.
 - "tradeSignal": A buy/sell recommendation, which should be one of "Buy", "Sell", or "Hold".
 
-**IMPORTANT:** Do not include usage tokens, system messages, or any other metadata. **Respond only with the JSON object** in the specified format—no additional text.
+IMPORTANT: Do not include usage details, system messages, or other metadata in your response. Respond only with the JSON object in the specified format.
 
 Tweets:
 ${tweets.join('\n')}
