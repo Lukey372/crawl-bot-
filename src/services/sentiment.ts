@@ -1,19 +1,17 @@
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
-interface EngagementMetrics {
-  averageLikes: number;
-  averageRetweets: number;
-  averageReplies: number;
-}
-
 interface SentimentResult {
   totalTweetsAnalyzed: number;
   overallSentiment: 'Bullish' | 'Bearish' | 'Neutral';
   promotionalCalls: number;
   verifiedProfiles: number;
   keyTakeaways: string[];
-  engagementMetrics: EngagementMetrics;
+  engagementMetrics: {
+    averageLikes: number;
+    averageRetweets: number;
+    averageReplies: number;
+  };
   dominantThemes: string[];
   confidenceLevel: string;
   tradeSignal: 'Buy' | 'Sell' | 'Hold';
@@ -24,7 +22,6 @@ interface SentimentResult {
  * For example, it strips leading "```json" and trailing "```".
  */
 function stripMarkdownCodeBlock(text: string): string {
-  // Remove starting and ending code block markers if present.
   return text.replace(/^```(json)?\s*/i, '').replace(/```$/i, '').trim();
 }
 
@@ -73,8 +70,8 @@ ${tweets.join('\n')}
       throw new Error(`DeepSeek API error: ${errorText}`);
     }
 
-    const data = await response.json();
-    let content = data.choices[0].message.content;
+    // Read the entire response as text.
+    let content = await response.text();
     logger.info("Raw sentiment response:", content);
 
     if (!content || content.trim() === "") {
@@ -88,7 +85,7 @@ ${tweets.join('\n')}
     try {
       result = JSON.parse(content);
     } catch (jsonError) {
-      logger.error("Failed to parse JSON response", jsonError);
+      logger.error("Failed to parse JSON response", jsonError, content);
       throw new Error("Failed to parse JSON response: " + content);
     }
     return result;
