@@ -127,8 +127,8 @@ export class TwitterCrawler {
       throw error;
     }
 
-    // Scroll repeatedly until at least 15 tweets are loaded or max 20 scroll attempts are reached.
-    await this.autoScroll(15, 20);
+    // Scroll repeatedly until at least 40 tweets are loaded or max 30 scroll attempts are reached.
+    await this.autoScroll(40, 30);
 
     // Extract tweet texts from the page.
     const tweets = await this.page.evaluate(() => {
@@ -145,7 +145,7 @@ export class TwitterCrawler {
    * @param minTweets - Minimum number of tweets to load.
    * @param maxScrolls - Maximum number of scroll attempts.
    */
-  private async autoScroll(minTweets: number = 30, maxScrolls: number = 50) {
+  private async autoScroll(minTweets: number = 40, maxScrolls: number = 30) {
     if (!this.page) return;
     let scrolls = 0;
     let previousTweetCount = 0;
@@ -164,8 +164,8 @@ export class TwitterCrawler {
       }
       previousTweetCount = tweetCount;
       await this.page.evaluate(() => window.scrollBy(0, 500));
-      // Slightly reduce delay to improve performance without overloading the page
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Increase delay to 1500ms to allow for dynamic loading.
+      await new Promise(resolve => setTimeout(resolve, 1500));
       scrolls++;
     }
   }
