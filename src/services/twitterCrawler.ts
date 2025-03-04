@@ -145,7 +145,7 @@ export class TwitterCrawler {
    * @param minTweets - Minimum number of tweets to load.
    * @param maxScrolls - Maximum number of scroll attempts.
    */
-  private async autoScroll(minTweets: number = 15, maxScrolls: number = 20) {
+  private async autoScroll(minTweets: number = 30, maxScrolls: number = 50) {
     if (!this.page) return;
     let scrolls = 0;
     let previousTweetCount = 0;
