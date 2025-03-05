@@ -17,6 +17,8 @@ interface SentimentResult {
   dominantThemes: string[];
   confidenceLevel: string;
   tradeSignal: 'Buy' | 'Sell' | 'Hold';
+  coinType: 'Memecoin' | 'Utility Coin';
+  utilityDescription?: string;
 }
 
 /**
@@ -33,7 +35,9 @@ function stripMarkdownCodeBlock(text: string): string {
  * @returns An object containing a structured sentiment analysis.
  */
 export async function analyzeSentiment(tweets: string[]): Promise<SentimentResult> {
-  const prompt = `You are a seasoned analyst with expertise in social media sentiment analysis for crypto tokens—especially memecoins, which can be extremely new (e.g., created only an hour ago) and highly volatile. Below is a list of tweets discussing a crypto token. Please analyze these tweets carefully, taking into account the token’s recency, rapid hype cycles, and any potential red flags. Your response must be formatted as a JSON object with the following fields:
+  const prompt = `You are a seasoned analyst with expertise in social media sentiment analysis for crypto tokens. You are especially familiar with both memecoins and utility coins. Memecoins are typically driven by hype and can be extremely volatile, while utility coins have a specific use case or functionality. 
+
+Below is a list of tweets discussing a solana memecoin token. Please analyze these tweets carefully, taking into account the token’s recency, hype cycles, and any potential red flags. Your response must be formatted as a JSON object with the following fields:
 
 - "totalTweetsAnalyzed": The total number of tweets analyzed.
 - "overallSentiment": The overall sentiment, which should be one of "Bullish", "Bearish", or "Neutral".
@@ -44,8 +48,10 @@ export async function analyzeSentiment(tweets: string[]): Promise<SentimentResul
 - "dominantThemes": An array of recurring topics or hashtags that are prominent in the tweets.
 - "confidenceLevel": A qualitative descriptor ("High", "Medium", or "Low") reflecting how confident you are in your analysis.
 - "tradeSignal": A buy/sell recommendation, which should be one of "Buy", "Sell", or "Hold".
+- "coinType": A string that indicates whether the token is a "Memecoin" or a "Utility Coin".
+- "utilityDescription": If the token is a Utility Coin, provide a brief description of its utility based on the tweets; if it is a Memecoin, this field can be an empty string.
 
-IMPORTANT: Do not include usage details, system messages, or other metadata in your response. Respond only with the JSON object in the specified format.
+IMPORTANT: Do not include any usage details, system messages, or other metadata in your response. Respond only with the JSON object in the specified format.
 
 Tweets:
 ${tweets.join('\n')}
